@@ -28,13 +28,16 @@ sudo hciconfig hci0 down; sleep 0.2; sudo hciconfig hci0 up; sleep 0.2; sudo nod
 
 ### TODO
 
-(1) It should start on startup, and restart if dead. (PM2)
-(2) It should save data every few megabytes, or every two hours.
-(3) It should gracefully handle connect and disconnect events.
-(4) It should have an LED that is only on when things aren't working properly.
-(5) It should attempt to transition the color of the glasses ~20 min after
+<ol>
+<li>(1) It should start on startup, and restart if dead. (PM2)
+</li><li>(2) It should save data every few megabytes, or every two hours.
+</li><li>(3) It should gracefully handle connect and disconnect events.
+</li><li>(4) It should have an LED that is only on when things aren't working properly.
+</li><li>(5) It should attempt to transition the color of the glasses ~20 min after
 every time check detected on the watch for the user study; this should be
 easily undone.
+</li>
+</ol>
 
 
 ### other useful commands:
