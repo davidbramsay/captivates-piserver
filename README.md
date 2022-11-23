@@ -67,7 +67,7 @@ sudo pm2 startup
 sudo pm2 save
 ```
 
-process list in `/root/.pm2/dump.pm2'
+process list in `/root/.pm2/dump.pm2`
 script in `/etc/systemd/pm2-root.service`
 logs in `/root/.pm2/logs/`
 monitor with `sudo pm2 monit`
