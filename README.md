@@ -9,12 +9,12 @@ equinox smartwatch to this device when they are in range.
 <li> The led turns on when either the watch or glasses are
 disconnected, and blinks when they both successfully connect before turning
 off.  This behavior can be changed to just indicate for glasses connection with
-the LEDINDICATE global</li>
+the `LEDINDICATE` global</li>
 <li> The peripheral LED on the glasses resets on the first watch time guess,
 and uses a subsequent time guess to indicate the LED has been seen to restart
 the process.  This code might need to change for the experiment; also, the
 delay and variability (how long it takes after a time guess for the LED to
-transition) is set in gLEDMIN and gLEDMINVARIANCE globals. </li>
+transition) is set in `gLEDMIN` and `gLEDMINVARIANCE` globals. </li>
 <li> There *may* be a memory leak with the read connection/callback (we don't
 assign it to a variable and null it on disconnect).  After profiling it doesn't
 seem to be a big deal (it would be a slow leak just on disconnect/reconnect),
@@ -28,7 +28,7 @@ When we don't hit 12500 records in 4 hours we still write a file (i.e. if just
 watch data is streaming); we also write a file when the glasses
 disconnect.  These settings can be modified with some of the globals.</li>
 <li> It would be nice to add a socketio websocket server here to stream data
-live, and to work with the E4 streaming server as well.  Major TODO item.
+live, and to work with the E4 streaming server as well.  Major to-do item.
 </li>
 </ol>
 
@@ -68,8 +68,11 @@ sudo pm2 save
 ```
 
 process list in `/root/.pm2/dump.pm2`
+
 script in `/etc/systemd/pm2-root.service`
+
 logs in `/root/.pm2/logs/`
+
 monitor with `sudo pm2 monit`
 
 
