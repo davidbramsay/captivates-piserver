@@ -26,6 +26,7 @@ const watchSurveyTypes = [
 
 ];
 
+
 Date.prototype.stdTimezoneOffset = function () {
 var jan = new Date(this.getFullYear(), 0, 1);
 var jul = new Date(this.getFullYear(), 6, 1);
@@ -63,43 +64,14 @@ function getDateInBCD(format12 = false){
     return day + month + date + year + hour + min + sec  + '0' + formatAM  + '0' + (format12 ? 1 :0) + '0' + daylight;
 }
 
-function reverseBytes(str){
-    //bytes are 2 chars long
-    //both systems are Little Endian; transport protocol is Big Endian
-    //thus, data always gets flipped in transit
-
-    s = str.replace(/^(.(..)*)$/, "0$1"); // add a leading zero if needed
-    var a = s.match(/../g);               // split number in groups of two
-    a.reverse();                          // reverse the groups
-    return a.join("");                    // join the groups back together
-}
-
-function base64ToHex(str) {
-    const raw = atob(str);
-    let result = '';
-    for (let i = 0; i < raw.length; i++) {
-        const hex = raw.charCodeAt(i).toString(16);
-        result += (hex.length === 2 ? hex : '0' + hex);
-    }
-    return result.toUpperCase();
-}
-
-function hexToBase64(str) {
-    return btoa(str.match(/\w{2}/g).map(function(a) {
-        return String.fromCharCode(parseInt(a, 16));
-    }).join(""));
-}
-
 function hexToFloat(str) {
-    return Buffer(str,'hex').readFloatBE(0);
+    return Buffer.from(str,'hex').readFloatBE(0);
 }
 
 //-- WATCH RX --//
 module.exports.processWatchPacket = function(value) {
 
-        hexval = reverseBytes(base64ToHex(value));
-        //console.log('rawupdate: ' +  UUID + '  ' + hexval);
-
+        hexval = value.reverse().toString('hex');
         timestamp = hexval.slice(0, 16);
         updateType = watchUpdateTypes[parseInt(hexval.slice(16,20))];
 
@@ -136,65 +108,22 @@ module.exports.processWatchPacket = function(value) {
                               timestamp.substring(2,4) + '/' + timestamp.substring(4,6) + '/' + timestamp.substring(6,8) + ' ' +
                               timestamp.substring(8,10) + ':' + timestamp.substring(10,12) + ':' + timestamp.substring(12,14);
 
-        //console.log(human_timestamp + ' : ' + updateType);
-        //console.log(data);
-
-        //this.setState({running_vals: [...this.state.running_vals, human_timestamp + " : " + updateType + ' ' + data.toString()]});
-	/*
-        var print_data = human_timestamp.slice(-17) + ": " + updateType.slice(3) + " ";
-        switch (updateType){
-            case 'TX_LUX_WHITELUX':
-            case 'TX_TEMP_HUMD':
-                print_data = print_data + data[0].toFixed(2) + ' ' + data[1].toFixed(2);
-                break;
-            case 'TX_SURVEY_RESULT':
-                print_data = print_data + data[0].slice(7) + '=' + data[1];
-                break;
-            default:
-                print_data = print_data + data.toString();
-                break;
-        }
-	*/
-
         return [new Date(human_timestamp), updateType, data];
 }
 
 //-- WATCH TX --//
 module.exports.constructWatchTXTimestamp = function(){
     var timestamp_string = getDateInBCD();
-    return hexToBase64('00' + timestamp_string);
+    return '00' + timestamp_string;
 }
 
 module.exports.constructWatchTXTimeBounds = function(startHr=8, endHr=23){
     var startHR_BCD = ('0' + startHr).slice(-2);
     var endHR_BCD = ('0' + endHr).slice(-2);
-    return hexToBase64('01' + startHR_BCD + endHR_BCD);
+    return '01' + startHR_BCD + endHR_BCD;
 }
 
 module.exports.constructWatchTXPause = function(paused=true){
-  if(paused) return hexToBase64('0201');
-  else return hexToBase64('0200');
+  if(paused) return '0201';
+  else return '0200';
 }
-
-//-- available function calls --//
-
-/*
-// helpers, shouldn't need to export
-function getDateInBCD(format12 = false)
-function reverseBytes(str)
-function base64ToHex(str)
-function hexToBase64(str)
-function hexToFloat(str)
-
-function processWatchPacket(UUID, value)
-    return (timestamp, updateType, data, print_data);
-    //fix timestamp that gets returned-- dateTime that will be reparsed
-    //into firestore timestamp type
-function constructWatchTXTimestamp()
-function constructWatchTXTimebounds(startHr=8, endHr=23)
-function constructWatchTXPause(paused=true)
-
-*/
-
-
-

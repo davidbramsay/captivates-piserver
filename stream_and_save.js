@@ -4,11 +4,30 @@ const AdvertisingDataBuilder = NodeBleHost.AdvertisingDataBuilder;
 const HciErrors = NodeBleHost.HciErrors;
 const AttErrors = NodeBleHost.AttErrors;
 const HciSocket = require('hci-socket');
-
 const struct = require('python-struct');
-const base64 = require('base-64');
-
 const fs = require('fs');
+
+//Open File for writing will close either when we hit:
+var MAXRECORDS = 12500;  //max records before closing a file
+var FILETIMEOUT = 240; //open file for writing timeout in mins
+
+//Indicator LED on pi control
+var LEDINDICATEWATCH = true; //if true, pi LED on either watch/glasses disconnected
+                              //if false, pi LED on when glasses disconnected
+
+//Control behavior for LED on glasses
+var gLEDTRANSITION = true; //if true, do a glasses LED Transtion LEDMINTILTRANSITION min after checking the time. otherwise no LED interaction.
+var gLEDMIN = 2; //min to wait before LED transition after last time check or last noticed transition.
+var gLEDMINVARIANCE = 2; //uniform distribution of width LEDMINVARIANCE minutes around LEDMIN to make transitions not perfectly predictable.
+
+var BLESTATE = {
+    'manager': null,
+    'scanner': null,
+    'gConn': null,
+    'wConn': null,
+    'gWrite': null,
+    'wWrite': null
+}
 
 const pavlok_ids = {
     BATTERY_SERVICE_UUID: "0000180f-0000-1000-8000-00805f9b34fb",
@@ -23,7 +42,11 @@ const pavlok_ids = {
 const CAPTIVATES_SERVICE_UUID = "0000fe80-8e22-4541-9d4c-21edae82ed19";
 const CAPTIVATES_LED_UUID = "0000fe84-8e22-4541-9d4c-21edae82ed19";
 const CAPTIVATES_RX_UUID = "0000fe81-8e22-4541-9d4c-21edae82ed19";
-const CAPTIVATES_ADDRESS = '80:E1:26:24:87:8D'
+const CAPTIVATES_ADDRESS = '80:E1:26:24:87:8D';
+
+const EQUINOX_SERVICE_UUID = "0000fe40-cc7a-482a-984a-7f2ed5b3e58f";
+const EQUINOX_TX_UUID = "0000fe41-8e22-4541-9d4c-21edae82ed19";
+const EQUINOX_RX_UUID = "0000fe42-8e22-4541-9d4c-21edae82ed19";
 
 const { processWatchPacket,
          constructWatchTXTimestamp,
@@ -37,16 +60,14 @@ var options = {
     // optional properties go here
 };
 
-//set LED ON by default
+//turn LED ON after brief off (to make sure we're still controlling it)
 var Gpio = require('onoff').Gpio; //include onoff to interact with the GPIO
 var LED = new Gpio(4, 'out'); //use GPIO pin 4, and specify that it is output
 var blinkInterval = null;
-
-//turn LED ON after brief off (to make sure we're still controlling it)
 LED.writeSync(0);
 setTimeout(()=>{LED.writeSync(1);}, 250);
 
-function blinkLED() { //function to start blinking
+function blinkLED() {
   if (LED.readSync() === 0) { //check the pin state, if the state is 0 (or off)
     LED.writeSync(1); //set pin state to 1 (turn LED on)
   } else {
@@ -55,11 +76,14 @@ function blinkLED() { //function to start blinking
 }
 
 function startBlink() {
-  blinkInterval = setInterval(blinkLED, 250); //run the blinkLED function every 250ms
+  if (blinkInterval == null){
+    blinkInterval = setInterval(blinkLED, 250); //run the blinkLED function every 250ms
+  }
 }
 
 function endBlink() { //function to stop blinking
   clearInterval(blinkInterval); // Stop blink intervals
+  blinkInterval = null;
   LED.writeSync(0); // Turn LED off
 }
 
@@ -109,13 +133,17 @@ function changeColor(){
       let d = new Date()
       console.log(d.toLocaleString() + ' change color called');
 
-      if (!transitioning && 70 == lightState[4]){
+      if (BLESTATE['gConn'] == null){
+        console.log('cannot change color, glasses not connected');
+      } else {
+          if (!transitioning && 70 == lightState[4]){
           dataLog('u', ['VIDGAME', 'START_TRANSITION']);
           transitioning = true;
-      }
-      if (transitioning){
-        moveToBlue();
-        lightTimer = setTimeout(changeColor.bind(this), 500);
+          }
+          if (transitioning){
+            moveToBlue();
+            lightTimer = setTimeout(changeColor.bind(this), 500);
+          }
       }
 }
 
@@ -123,15 +151,24 @@ function changeColor(){
 var fileStreaming = false;
 var writeStream = null;
 var numRecords = 0;
-var MAXRECORDS = 200;
+var fileCloseTimer = null;
+
+function closeOpenFile(){
+    if (fileStreaming){
+        writeStream.end();
+        writeStream = null;
+        fileStreaming = false;
+    } else {
+        console.error('Tried to close a file when no files are open.');
+    }
+}
 
 function writeLineToDisk(dataArray){
 
     if (numRecords >= MAXRECORDS){//if we've maxed out our file
-        console.log('finished writing file.');
-        writeStream.end();
-        writeStream = null;
-        fileStreaming = false;
+        console.log('Closing file due to maxrecords.');
+        closeOpenFile();
+        clearTimeout(fileCloseTimer);
     }
 
     if (!fileStreaming){ //if we're not streaming, open file
@@ -150,60 +187,36 @@ function writeLineToDisk(dataArray){
         console.log('logging to file recording_' + datestring + '.csv');
         fileStreaming = true;
         numRecords = 0;
+
+        fileCloseTimer = setTimeout(()=>{
+            console.log('Closing file due to timeout.');
+            closeOpenFile();
+        }, FILETIMEOUT*60*1000);
     }
 
     writeStream.write(dataArray.join(',') + '\n');
     numRecords += 1;
 }
 
+var tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
+
 function dataLog(type, dataArray){
-	let currentTimestamp = new Date().toISOString();
-	//console.log('dataLOG:' + type + ',' + currentTimestamp + ',' + dataArray);
-    console.log(currentTimestamp + ': got packet (' + type + ')');
+    let currentTimestamp = (new Date(Date.now() - tzoffset)).toISOString().slice(0, -1);
+
+    if (type=='g'){
+        console.log(currentTimestamp + ': got packet (' + type + ':' + dataArray[0] + ')');
+    } else {
+        console.log(currentTimestamp + ': got packet (' + type + ':' + dataArray[1] + ')');
+    }
  	return writeLineToDisk([type, currentTimestamp, ...dataArray]);
 }
 
-var x;
 function sendLEDUpdate(ledArray){
     if(BLESTATE['gWrite'] != null){
-      x = x || 0;
-      x += 1;
 
-      console.log(x + ': writing glasses LED ' + ledArray);
-
-      function printResult(x, result){
-        return function(result){
-            console.log(x + ': ' + HciErrors.toString(result) + ' | ' + AttErrors.toString(result));
-        }
-      }
-
-      function printResultBad(result){
-            console.log(x + ': ' + HciErrors.toString(result) + ' | ' + AttErrors.toString(result));
-      }
-      function sent(){
-        console.log('sent');
-      }
-      debugger;
-      //BLESTATE['gWrite'].writeWithoutResponse(Buffer.from(bytesToHex(ledArray.slice(0)), 'hex'), sent, printResult(x));
-      //BLESTATE['gWrite'].writeWithoutResponse(Buffer.from(bytesToHex(ledArray.slice(0)), 'hex'), sent, printResult(x));
-      //BLESTATE['gWrite'].writeWithoutResponse(Buffer.from(bytesToHex(ledArray.slice(0)), 'hex'));
+      console.log('Writing glasses LED: ' + ledArray);
       BLESTATE['gWrite'].writeWithoutResponse(Buffer.from(ledArray.slice(0)));
-      //BLESTATE['gWrite'].write(Buffer.from(bytesToHex(ledArray.slice(0)), 'hex'));
-      //BLESTATE['gWrite'].writeWithoutResponse(Buffer.from(bytesToHex(ledArray.slice(0)), 'hex'), sent, printResult(x));
-      //BLESTATE['gWrite'].writeWithoutResponse(Buffer.from(bytesToHex(ledArray.slice(0))), sent, printResult(x));
-      //BLESTATE['gWrite'].writeWithoutResponse(Buffer.from(ledArray.slice(0)), sent, printResult(x));
-      //BLESTATE['gWrite'].write(Buffer.from(ledArray.slice(0)));
-        //
-      //BLESTATE['gWrite'].writeWithoutResponse(Buffer.from(ledArray), sent, printResult(x));
-      //BLESTATE['gWrite'].writeWithoutResponse(ledArray.slice(0), sent, printResult(x));
-      //BLESTATE['gWrite'].writeWithoutResponse(bytesToHex(ledArray.slice(0)), sent, printResult(x));
-      /*
-      BLESTATE['gWrite'].write(Buffer.from(bytesToHex(ledArray.slice(0)), 'hex'), function(result){
-      //BLESTATE['gWrite'].write(Buffer.from(ledArray.slice(0)), function(result) {
-        console.log(HciErrors.toString(result));
-        console.log(AttErrors.toString(result));
-      });
-      */
+
     }else{
         console.error('glasses write not connected');
     }
@@ -212,18 +225,39 @@ function sendLEDUpdate(ledArray){
 function watchSendUpdateRTC(){
     if(BLESTATE['wWrite'] != null){
         console.log('sending watch update RTC');
-        BLESTATE['wWrite'].write(
-            constructWatchTXTimestamp(), null);
+        BLESTATE['wWrite'].writeWithoutResponse(Buffer.from(constructWatchTXTimestamp(), 'hex'));
+    }else{
+        console.error('watch write not connected');
+    }
+}
+
+function watchSendPause(pause=true){
+    if(BLESTATE['wWrite'] != null){
+        console.log('sending pause ' + pause + '.');
+        BLESTATE['wWrite'].writeWithoutResponse(Buffer.from(constructWatchTXPause(pause), 'hex'));
     }else{
         console.error('watch write not connected');
     }
 }
 
 
-function updateWatchData(dataArray){
-    if (dataArray[0].getYear() > 120 && fileOpen.current != null){ //only send data if we've synced the clock and writing
-	  dataLog('w', dataArray);
-	}
+function updateWatchData(value){
+    let dataArray = processWatchPacket(value);
+	dataLog('w', dataArray);
+
+    if (gLEDTRANSITION && dataArray[1] == 'TX_TIME_SEEN' && BLESTATE['gConn'] != null){
+        clearTimeout(lightTimer);
+
+        if (transitioning){
+            transitioning = false;
+        }
+
+        resetLight();
+
+        let mins =  gLEDMIN + (Math.random()*gLEDMINVARIANCE) - (gLEDMINVARIANCE/2);
+        console.log('transition armed for ' + mins + ' mins.');
+        lightTimer = setTimeout(changeColor, Math.round(mins*60*1000));
+    }
 }
 
 
@@ -234,53 +268,37 @@ function updateGlassesData(value) {
                     'HHIIIIIIII',
                     value.slice(0,36));
 
-
 	switch(parsedPayload[0]){
 
 		case 5:
-
-            console.log(value.length);
-            console.log(struct.sizeOf(parsedPayload[4] + 'B'));
-
             var blinkData = struct.unpack(
 			    parsedPayload[4] + 'B',
                 value.slice(36));
             dataLog('g',['b', ...parsedPayload, 'PAYLOAD', ...blinkData]);
-
 			break;
 
 		case 6:
-            console.log('--6--');
-            console.log(value.length);
-            console.log(struct.sizeOf('HHIHHIHHIHHIHHIHHIHHIHHIHHIHHIII'.repeat(4)));
-
 			var thermalData = struct.unpack(
                 'HHIHHIHHIHHIHHIHHIHHIHHIHHIHHIII'.repeat(4),
                 value.slice(36));
             dataLog('g',['t', ...parsedPayload, 'PAYLOAD', ...thermalData]);
-
 			break;
 
 		case 7:
-
             var accData = struct.unpack(
 			    'hhhII'.repeat(25),
                 value.slice(36));
             dataLog('g',['a', ...parsedPayload, 'PAYLOAD', ...accData]);
-
 			break;
 
 		case 9:
-
             var gyroData = struct.unpack(
 			    'hhhII'.repeat(25),
                 value.slice(36));
             dataLog('g',['g', ...parsedPayload, 'PAYLOAD', ...gyroData]);
-
 			break;
 
 		default:
-
 			console.error('UNKOWN PACKET TYPE');
 	}
 	}catch(e){
@@ -289,63 +307,35 @@ function updateGlassesData(value) {
 	}
 }
 
-function base64ToHex(str) {
-    console.log(str);
-    const raw = base64.decode(str);
-    console.log(raw);
-    let result = '';
-    for (let i = 0; i < raw.length; i++) {
-        const hex = raw.charCodeAt(i).toString(16);
-        result += (hex.length === 2 ? hex : '0' + hex);
-    }
-    return result.toUpperCase();
-}
-
-function hexToBase64(str) {
-    return base64.encode(str.match(/\w{2}/g).map(function(a) {
-        return String.fromCharCode(parseInt(a, 16));
-    }).join(""));
-}
-
-function decimalToHex(d, padding=2) {
-    var hex = Number(d).toString(16);
-    padding = typeof (padding) === "undefined" || padding === null ? padding = 2 : padding;
-
-    while (hex.length < padding) {
-        hex = "0" + hex;
-    }
-
-    return hex;
-}
-
-function bytesToHex(bytes) {
-    for (var hex = [], i = 0; i < bytes.length; i++) {
-    var current = bytes[i] < 0 ? bytes[i] + 256 : bytes[i];
-    hex.push((current >>> 4).toString(16));
-    hex.push((current & 0xf).toString(16));
-    }
-    return hex.join("");
-}
+var scanning = false;
 
 function startScan(){
-    BLESTATE['scanner'] = BLESTATE['manager'].startScan();
-    console.log('start scanning...');
-    BLESTATE['scanner'].on('report', handleScanReport);
+    if (!scanning){
+        scanning = true;
+        console.log('start scanning...');
+        BLESTATE['scanner'] = BLESTATE['manager'].startScan();
+        BLESTATE['scanner'].on('report', handleScanReport);
+    }
 }
 
 function stopScan(){
-    BLESTATE['scanner'].stopScan();
-    console.log('stopping scan.');
-}
-
-function sendToGlasses(command){
-    //BLESTATE['gWrite'].write(Buffer.from([65, 66, 67])); // Can add callback if we want the result status
+    if (scanning){
+        BLESTATE['scanner'].stopScan();
+        scanning = false;
+        console.log('stopping scan.');
+    }
 }
 
 function checkConnections(){
-    if (BLESTATE['gConn'] != null && BLESTATE['wConn'] != null){
-        console.log('Connected to Both Watch and Glasses');
+    if ((LEDINDICATEWATCH && BLESTATE['gConn'] != null && BLESTATE['wConn'] != null) ||
+       (!LEDINDICATEWATCH && BLESTATE['gConn'] != null)){
+
+        console.log('LED indicator off.');
         blinkForNSeconds(5);
+    }
+
+    if (BLESTATE['gConn'] != null && BLESTATE['wConn'] != null){
+        console.log('Connected to both Glasses and Watch.');
         stopScan();
     }
 }
@@ -355,7 +345,6 @@ function handleScanReport(eventData){
         if (eventData.connectable && eventData.parsedDataItems['localName'] == 'CAPTIVATE' && BLESTATE['gConn'] == null) {
 
             console.log('>>> Found Glasses');
-            stopScan();
 
             BLESTATE['manager'].connect(eventData.addressType, eventData.address, {/*options*/}, function(conn) {
 
@@ -363,62 +352,106 @@ function handleScanReport(eventData){
                 BLESTATE['gConn'] = conn;
                 console.log('Connected to ' + conn.peerAddress);
 
-                console.log('exchange MTU');
-                conn.gatt.exchangeMtu(function(err) { console.log('MTU THING:' + err); console.log('MTU: ' + conn.gatt.currentMtu); });
+                console.log('GLASSES: exchange MTU');
+                conn.gatt.exchangeMtu(function(err) {console.log('GLASSES: MTU Negotiated: ' + conn.gatt.currentMtu); });
 
-                console.log('discover_services');
-                //conn.gatt.discoverServicesByUuid(CAPTIVATES_SERVICE_UUID, 1, function(services) {
+                console.log('GLASSES: discover_services');
                 conn.gatt.discoverAllPrimaryServices(function(services) {
                     if (services.length == 0) {
                         return;
                     }
                     for (let service in services){
-                        console.log('SERVICE:' + services[service].uuid);
+                        console.log('GLASSES: SERVICE:' + services[service].uuid);
                         services[service].discoverCharacteristics(function(characteristics) {
                             for (var i = 0; i < characteristics.length; i++) {
                                 var c = characteristics[i];
                                 if (c.uuid.toLowerCase() == CAPTIVATES_LED_UUID) {
-                                    console.log('GOT WRITE CHARACTERISTIC');
+                                    console.log('GLASSES: GOT GLASSES WRITE CHARACTERISTIC');
                                     console.log(c);
-                                    //c.write(Buffer.from([255, 0, 170]));
                                     BLESTATE['gWrite'] = c;
                                 }
                                 if ( c.uuid.toLowerCase() == CAPTIVATES_RX_UUID) {
-
-                                    console.log('GOT NOTIFY CHARACTERISTIC');
+                                    console.log('GLASSES: GOT GLASSES NOTIFY CHARACTERISTIC');
                                     console.log(c);
-//                                    c.writeCCCD(/*enableNotifications*/ true, /*enableIndications*/ false);
-//                                    c.on('change', updateGlassesData);
+                                    c.writeCCCD(/*enableNotifications*/ true, /*enableIndications*/ false);
+                                    c.on('change', updateGlassesData);
                                 }
                             }
                         });
                     }
+
                     checkConnections();
-                    console.log('checking MTU again:' + conn.gatt.currentMtu);
-                    conn.gatt.cancelReliableWrite();
-                    setTimeout(changeColor, 30000);
                 });
 
                 BLESTATE['gConn'].on('disconnect', function(reason) {
-                    console.log('Disconnected from glasses ' + conn.peerAddress + ' due to ' + HciErrors.toString(reason));
+                    console.log('GLASSES: Disconnected from glasses ' + conn.peerAddress + ' due to ' + HciErrors.toString(reason));
                     LED.writeSync(1); //set pin state to 1 (turn LED on)
                     BLESTATE['gConn'] = null;
+                    BLESTATE['gWrite'] = null;
+                    console.log('Closing File due to Glasses Disconnect.');
+                    closeOpenFile();
+                    clearTimeout(fileCloseTimer);
                     startScan();
+                });
+            });
+    } else if (eventData.connectable && eventData.parsedDataItems['localName'] == 'WATCH01' && BLESTATE['wConn'] == null) {
 
+            console.log('>>> Found Watch');
+
+            BLESTATE['manager'].connect(eventData.addressType, eventData.address, {/*options*/}, function(conn) {
+
+                console.log(conn.gatt);
+                BLESTATE['wConn'] = conn;
+                console.log('WATCH: Connected to ' + conn.peerAddress);
+
+                console.log('WATCH: exchange MTU');
+                conn.gatt.exchangeMtu(function(err) {console.log('WATCH: MTU Negotiated: ' + conn.gatt.currentMtu); });
+
+                console.log('WATCH: discover_services');
+                conn.gatt.discoverAllPrimaryServices(function(services) {
+                    if (services.length == 0) {
+                        return;
+                    }
+                    for (let service in services){
+                        console.log('WATCH: SERVICE:' + services[service].uuid);
+                        services[service].discoverCharacteristics(function(characteristics) {
+                            for (var i = 0; i < characteristics.length; i++) {
+                                var c = characteristics[i];
+                                if (c.uuid.toLowerCase() == EQUINOX_TX_UUID) {
+                                    console.log('WATCH: GOT WATCH WRITE CHARACTERISTIC');
+                                    console.log(c);
+                                    BLESTATE['wWrite'] = c;
+                                    watchSendUpdateRTC();
+                                    //watchSendPause();
+                                    //setTimeout(()=>{watchSendPause(false);}, 2000);
+                                }
+                                if ( c.uuid.toLowerCase() == EQUINOX_RX_UUID) {
+
+                                    console.log('WATCH: GOT WATCH NOTIFY CHARACTERISTIC');
+                                    console.log(c);
+                                    c.writeCCCD(/*enableNotifications*/ true, /*enableIndications*/ false);
+                                    c.on('change', updateWatchData);
+                                }
+                            }
+                        });
+                    }
+
+                    checkConnections();
+                });
+
+                BLESTATE['wConn'].on('disconnect', function(reason) {
+                    console.log('WATCH: Disconnected from watch ' + conn.peerAddress + ' due to ' + HciErrors.toString(reason));
+                    if (LEDINDICATEWATCH){
+                        LED.writeSync(1); //set pin state to 1 (turn LED on)
+                    }
+                    BLESTATE['wConn'] = null;
+                    BLESTATE['wWrite'] = null;
+                    startScan();
                 });
             });
     } else{
         //console.log('Found device named ' + (eventData.parsedDataItems['localName'] || '(no name)'));// + ':', eventData);
     }
-}
-
-var BLESTATE = {
-    'manager': null,
-    'scanner': null,
-    'gConn': null,
-    'wConn': null,
-    'gWrite': null,
-    'wWrite': null
 }
 
 BleManager.create(transport, options, function(err, manager){
@@ -428,7 +461,7 @@ BleManager.create(transport, options, function(err, manager){
     }
 
     BLESTATE['manager'] = manager;
-    startScan({scanWindow:20, scanInterval:20, scanFilters: [new BleManager.BdAddrScanFilter('public', CAPTIVATES_ADDRESS)]});
+    startScan();
 });
 
 
