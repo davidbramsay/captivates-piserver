@@ -203,11 +203,11 @@ var tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in millisecond
 function dataLog(type, dataArray){
     let currentTimestamp = (new Date(Date.now() - tzoffset)).toISOString().slice(0, -1);
 
-    if (type=='g'){
+    /*if (type=='g'){
         console.log(currentTimestamp + ': got packet (' + type + ':' + dataArray[0] + ')');
     } else {
         console.log(currentTimestamp + ': got packet (' + type + ':' + dataArray[1] + ')');
-    }
+    }*/
  	return writeLineToDisk([type, currentTimestamp, ...dataArray]);
 }
 
@@ -367,12 +367,12 @@ function handleScanReport(eventData){
                                 var c = characteristics[i];
                                 if (c.uuid.toLowerCase() == CAPTIVATES_LED_UUID) {
                                     console.log('GLASSES: GOT GLASSES WRITE CHARACTERISTIC');
-                                    console.log(c);
+                                    //console.log(c);
                                     BLESTATE['gWrite'] = c;
                                 }
                                 if ( c.uuid.toLowerCase() == CAPTIVATES_RX_UUID) {
                                     console.log('GLASSES: GOT GLASSES NOTIFY CHARACTERISTIC');
-                                    console.log(c);
+                                    //console.log(c);
                                     c.writeCCCD(/*enableNotifications*/ true, /*enableIndications*/ false);
                                     c.on('change', updateGlassesData);
                                 }
@@ -419,7 +419,7 @@ function handleScanReport(eventData){
                                 var c = characteristics[i];
                                 if (c.uuid.toLowerCase() == EQUINOX_TX_UUID) {
                                     console.log('WATCH: GOT WATCH WRITE CHARACTERISTIC');
-                                    console.log(c);
+                                    //console.log(c);
                                     BLESTATE['wWrite'] = c;
                                     watchSendUpdateRTC();
                                     //watchSendPause();
@@ -428,7 +428,7 @@ function handleScanReport(eventData){
                                 if ( c.uuid.toLowerCase() == EQUINOX_RX_UUID) {
 
                                     console.log('WATCH: GOT WATCH NOTIFY CHARACTERISTIC');
-                                    console.log(c);
+                                    //console.log(c);
                                     c.writeCCCD(/*enableNotifications*/ true, /*enableIndications*/ false);
                                     c.on('change', updateWatchData);
                                 }

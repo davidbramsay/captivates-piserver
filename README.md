@@ -96,5 +96,12 @@ char-write-cmd 0x0019 00000000FD0000000000000000FD00000000
 char-write-cmd 0x0019 0000000000FD0000000000000000FD000000
 ```
 
+### power button
+
+I also added a power button with LED (a Wendry Chassis NO button with LED)
+using
+[https://github.com/fabiosoft/pi-power-button](https://github.com/fabiosoft/pi-power-button)
+with all reset button GPIO commands commented out before installing.
+
 
 
