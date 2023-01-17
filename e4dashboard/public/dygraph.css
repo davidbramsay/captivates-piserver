@@ -1,0 +1,130 @@
+:root { font-family: 'Inter', sans-serif; }
+@supports (font-variation-settings: normal) {
+  :root { font-family: 'Inter var', sans-serif; }
+}
+
+body {
+    background-color:#ffffff;
+    color:#2b303b;
+}
+
+
+.separator {
+    /* Content is centered horizontally */
+    align-items: center;
+    display: flex;
+
+    height:20px;
+    /* Used to set the position of text */
+    position: relative;
+}
+
+.separator__content {
+    /* We won't see the separator line */
+    background: #fff;
+
+    /* Displayed at the center of separator */
+    left: 45%;
+    position: absolute;
+    top: 35%;
+
+    /* Spacing */
+    padding-top: 10px;
+    padding-bottom: 10px;
+
+    border-bottom: 1px solid #f0f0f0;
+    height: 1px;
+    width:50%;
+}
+
+
+
+#gauge_hr > .gauge > .dial {
+    stroke:#d9d9d9;
+    stroke-width: 15;
+}
+#gauge_hr > .gauge > .value {
+    stroke: #000080;
+    stroke-dasharray: none;
+    stroke-width: 15;
+}
+#gauge_hr2 > .gauge > .dial {
+    stroke:#d9d9d9;
+    stroke-width: 3;
+}
+#gauge_hr2 > .gauge > .value {
+    stroke: #000080;
+    stroke-dasharray: none;
+    stroke-width: 7;
+}
+.gauge > .value-text {
+    fill: #000080;
+    stroke: #000080;
+    color:#000080;
+}
+
+.gauge {
+    color:#000080;
+    font-weight:bold;
+    font-size:100;
+}
+.inner {
+    position: absolute;
+}
+
+.dygraph-title {
+    color:#2c2c2c;
+    font-weight:bold;
+}
+
+.dygraph-ylabel {
+      /* This rule only applies to the y-axis label */
+      font-size: 12px;
+      color:#d9d9d9;
+}
+
+.dygraph-axis-label {
+  /* position: absolute; */
+  /* font-size: 14px; */
+  z-index: 10;
+  line-height: normal;
+  overflow: hidden;
+  color:#4f4f4f;
+}
+
+.dygraph-axis-label-y {
+    font-size:8px;
+    color:#4f4f4f;
+}
+
+.dygraph-axis-label-x {
+    font-size:8px;
+    color:#4f4f4f;
+}
+
+.dygraph-xlabel {
+  text-align: center;
+  color:#4f4f4f;
+}
+
+/* For y-axis label */
+.dygraph-label-rotate-left {
+  text-align: center;
+  /* See http://caniuse.com/#feat=transforms2d */
+  transform: rotate(90deg);
+  -webkit-transform: rotate(90deg);
+  -moz-transform: rotate(90deg);
+  -o-transform: rotate(90deg);
+  -ms-transform: rotate(90deg);
+}
+
+/* For y2-axis label */
+.dygraph-label-rotate-right {
+  text-align: center;
+  /* See http://caniuse.com/#feat=transforms2d */
+  transform: rotate(-90deg);
+  -webkit-transform: rotate(-90deg);
+  -moz-transform: rotate(-90deg);
+  -o-transform: rotate(-90deg);
+  -ms-transform: rotate(-90deg);
+}

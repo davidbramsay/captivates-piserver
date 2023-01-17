@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<link rel="stylesheet"  href="inter.css"/>
+<link rel="stylesheet"  href="dygraph.css" type="text/css"/>
+<script src="dygraph.min.js"></script>
+<script src="jquery-3.6.3.min.js"></script>
+<script src="socket.io.min.js"></script>
+<script src="gauge.js"></script>
+</head>
+
+<body>
+
+<div style="font-size:30px; margin:20px 10px 20px 10px;">E4 Streaming Dashboard</div>
+<div style="border-style: solid;
+            border-radius: 15px;
+            border: solid 3px #6e7491;
+            padding:10px;
+            width: 600px;
+            box-shadow: 3px 15px 8px -10px rgba(0, 0, 0, 0.3);">
+
+<div style="width:600px; height:140px; display:inline-flex">
+    <div id="div_bvp" style="width:600px; height:140px;"></div>
+    <div id="labels_bvp" class="inner" style="width:600px;text-align:right"></div>
+</div>
+
+<div style="width:600px; height:100px; display:inline-flex">
+    <div id="div_hr"  style="width:400px; height:100px;"></div>
+
+    <div style="width:120px; margin-left:25px; margin-top:20px;height:120px;">
+        <div style="width:120px; height:120px;" class="inner">
+        <div id="gauge_hr" class="gauge-container" ></div>
+        </div>
+        <div style="width:120px; height:120px;" class="inner">
+        <div id="gauge_hr2" class="gauge-container" ></div>
+        </div>
+    </div>
+
+    <div id="labels_hr" class="inner" style="width:600px;text-align:right"></div>
+</div>
+
+
+<div class="separator">
+    <div class="separator__content"></div>
+</div>
+
+<div style="width:600px; height:140px; display:inline-flex">
+    <div id="div_gsr" style="width:600px; height:140px;"></div>
+    <div id="labels_gsr" class="inner" style="padding-top:15px;width:600px;text-align:right"></div>
+</div>
+
+<div class="separator">
+    <div class="separator__content"></div>
+</div>
+
+<div style="width:600px; height:140px; display:inline-flex">
+    <div id="div_acc" style="width:600px; height:140px;"></div>
+    <div id="labels_acc" class="inner" style="padding-top:15px;width:600px;text-align:right"></div>
+</div>
+
+</div>
+
+
+<!--<div id="div_ibi" style="width:500px; height:100px;"></div>-->
+
+
+</body>
+
+<script>
+
+$(document).ready(function() {
+      var socket = io();
+
+      var gauge_hr = Gauge(
+            document.getElementById("gauge_hr"),
+            {
+            max: 140,
+            dialStartAngle: 180,
+            dialEndAngle: -90,
+            value: 50,
+            showValue: false,
+            color: function(value) {
+                if(value < 60) {
+                return "#19ad79";
+                }else if(value < 80) {
+                return "#ffd945";
+                }else {
+                return "#d83c31";
+                }
+            },
+            viewBox: "0 0 100 100"
+            }
+        );
+
+      var gauge_hr2 = Gauge(
+            document.getElementById("gauge_hr2"),
+            {
+            max: 140,
+            dialStartAngle: 180,
+            dialEndAngle: -90,
+            value:40,
+            label: function(value) {
+                return Math.round(value) + " bpm";
+            },
+            viewBox: "0 0 100 100"
+            }
+        );
+
+      const EVERYN = 5;
+
+      // BVP
+      var data_bvp = new Array(1000).fill([new Date(), 0]);
+      var redraw_count_bvp = 0;
+      var div_bvp = new Dygraph(document.getElementById("div_bvp"), data_bvp,
+                          {
+                            ylabel:'nW',
+                            title: 'Blood Volume Pulse',
+                            axes: {
+                                y: {
+                                    axisLabelWidth: 40
+                                    }
+                            },
+                            drawGrid: false,
+                            strokeWidth:2.5,
+                            labels: ['Time', 'BVP'],
+                            labelsDiv: document.getElementById("labels_bvp")
+                          });
+
+      socket.on('E4_Bvp', function(args) {
+        var x = new Date(args[0]*1000);
+        var y = Number(args[1][0]);
+
+        data_bvp.push([x,y]);
+        data_bvp.shift();
+
+        if (++redraw_count_bvp >= EVERYN){
+            div_bvp.updateOptions( { 'file': data_bvp } );
+            redraw_count_bvp=0;
+        }
+
+      });
+
+      // ACC
+      var data_acc = [];
+      var redraw_count_acc = 0;
+      var div_acc = new Dygraph(document.getElementById("div_acc"), data_acc,
+                          {
+                            ylabel:'g',
+                            title: 'Wrist Acceleration',
+                            labels: ['Time', 'X', 'Y', 'Z'],
+                            labelsDiv: document.getElementById("labels_acc"),
+                            axes: {
+                                y: {
+                                    axisLabelWidth: 40
+                                    }
+                            },
+                            drawGrid: false,
+                            strokeWidth:2
+                          });
+
+      socket.on('E4_Acc', function(args) {
+        var t = new Date(args[0]*1000);
+        var x = Number(args[1][0])/64; //need to divide by 64 to get Gs
+        var y = Number(args[1][1])/64;
+        var z = Number(args[1][2])/64;
+
+        data_acc.push([t,x,y,z]);
+
+        while(data_bvp[0][0]>data_acc[0][0] && data_acc.length>1){
+            data_acc.shift();
+        }
+
+        if (++redraw_count_acc >= EVERYN){
+            div_acc.updateOptions( { 'file': data_acc } );
+            redraw_count_acc=0;
+        }
+      });
+
+      // HR
+      var HR_ROLLING_AVG = 10;
+      var hr_rolling = new Array(HR_ROLLING_AVG).fill(50);
+
+      var data_hr = [];
+      var max_rate=125;
+
+      var div_hr = new Dygraph(document.getElementById("div_hr"), data_hr,
+                          {
+                            ylabel:'bpm',
+                            title:'Heart Rate',
+                            axes: {
+                                y: {
+                                    axisLabelWidth: 100 
+                                    }
+                            },
+                            drawGrid: false,
+                            strokeWidth:3,
+                            series:{
+                            'HR':{
+                                strokeWidth:1,
+                                drawPoints:true
+                                }},
+                            labels: ['Time', 'HR', 'HR_AVG'],
+                            labelsDiv: document.getElementById("labels_hr")
+                          });
+
+      socket.on('E4_Hr', function(args) {
+        var x = new Date(args[0]*1000);
+        var y = Number(args[1][0]);
+
+        hr_rolling.push(y);
+        hr_rolling.shift();
+        var new_avg = hr_rolling.reduce((partialSum, a) => partialSum + a, 0)/HR_ROLLING_AVG;
+
+        data_hr.push([x,y,new_avg]);
+
+        if (data_hr.length>500){
+            data_hr.shift();
+        }
+        div_hr.updateOptions( { 'file': data_hr } );
+        if (y>max_rate){
+            $('.knob_hr').trigger('configure',
+                {"max":y}
+            );
+            max_rate = y;
+        }
+
+        gauge_hr.setValueAnimated(y, 1.5);
+        gauge_hr2.setValueAnimated(new_avg, 1.5);
+      });
+
+      // IBI seems to be perfect inverse of HR (HR/60); HR is derived from IBI
+      // IBI
+      /*
+      var data_ibi = [];
+      var div_ibi = new Dygraph(document.getElementById("div_ibi"), data_ibi,
+                          {
+                            drawPoints: true,
+                            showRoller: true,
+                            labels: ['Time', 'IBI']
+                          });
+
+      socket.on('E4_Ibi', function(args) {
+        var x = new Date(args[0]*1000);
+        var y = Number(args[1][0]);
+
+        data_ibi.push([x,y]);
+
+        if (data_ibi.length>1000){
+            data_ibi.shift();
+        }
+        div_ibi.updateOptions( { 'file': data_ibi } );
+      });
+      */
+
+      // GSR
+      var data_gsr = [];
+      var div_gsr = new Dygraph(document.getElementById("div_gsr"), data_gsr,
+                          {
+                            ylabel:'uS',
+                            title:'Electrodermal Activity',
+                            axes: {
+                                y: {
+                                    axisLabelWidth: 35
+                                    }
+                            },
+                            drawGrid: false,
+                            strokeWidth:2.5,
+                            labels: ['Time', 'GSR'],
+                            labelsDiv: document.getElementById("labels_gsr")
+                          });
+
+      socket.on('E4_Gsr', function(args) {
+        var x = new Date(args[0]*1000);
+        var y = Number(args[1][0]);
+
+        data_gsr.push([x,y]);
+
+        if (data_gsr.length>1000){
+            data_gsr.shift();
+        }
+        div_gsr.updateOptions( { 'file': data_gsr } );
+      });
+
+    }
+);
+
+
+</script>
+
+
+</html>
