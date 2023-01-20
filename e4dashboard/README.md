@@ -12,3 +12,14 @@ doesn't handle disconnects/retries gracefully.
 (3) It doesn't include glasses and watch data.
 
 (4) It doesn't show LED state of glasses.
+
+
+
+Colors:
+
+Orange: #E53D00
+Yellow: #FFE900
+Teal: #008080
+Blue: #000080
+Light Grey: #D9D9D9
+Dark Text: #2B303B
