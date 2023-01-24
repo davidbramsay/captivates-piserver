@@ -12,12 +12,13 @@
 <script src="processTemp.js" type="text/javascript"></script>
 </head>
 
-<body>
+<body style="background-color:lime;">
 
 <!--<div style="font-size:30px; margin:20px 10px 20px 10px;">E4 Streaming
     Dashboard</div>-->
 
 <div style="border-style: solid;
+            background-color:white;
             border-radius: 15px;
             border: solid 3px #6e7491;
             padding:10px;
@@ -93,21 +94,111 @@
     <div class="separator__content"></div>
 </div>
 
-<div style="width:600px; height:140px; display:inline-flex">
+<div style="margin-bottom:20px; width:600px; height:140px; display:inline-flex">
     <div id="div_gb" style="width:600px; height:140px;"></div>
     <div id="labels_gb" class="inner" style="padding-top:15px;width:600px;text-align:right"></div>
 </div>
 
 <div style="width:600px; height:140px; display:inline-flex">
-    <div id="div_temp" style="width:600px; height:140px;"></div>
-    <div id="labels_temp" class="inner" style="padding-top:15px;width:600px;text-align:right"></div>
+    <div id="div_temp" style="width:180px; height:140px;"></div>
+    <div id="temp_vals" style="width:110px;">
+
+    <div style="width:110px;display:flex">
+    <div style="color:#400080; font-size:11px; padding-top:15px; padding-right:5px; height:18px; width:48px; text-align:right">TEMPLE:</div>
+    <div style="color:#66800; font-size:13px; padding-top:13px; height:18px; width:60px"><span class="temple">NA</span> &#8451;</div>
+    </div>
+
+    <div style="width:110px;display:flex">
+    <div style="color:#078339; font-size:11px; padding-top:15px; padding-right:5px; height:18px; width:48px; text-align:right">NOSE:</div>
+    <div style="color:#66800; font-size:13px; padding-top:13px; height:18px; width:60px"><span class="nose">NA</span> &#8451;</div>
+    </div>
+
+    <div style="width:110px;display:flex">
+    <div style="color:#668000; font-size:11px; padding-top:15px; padding-right:5px; height:18px; width:48px; text-align:right">WRIST:</div>
+    <div style="color:#66800; font-size:13px; padding-top:13px; height:18px; width:60px"><span class="wrist">NA</span> &#8451;</div>
+    </div>
+
+    <div style="width:110px;display:flex">
+    <div style="color:#325a98; font-size:11px; padding-top:15px; padding-right:5px; height:18px; width:48px; text-align:right">AMBIENT:</div>
+    <div style="color:#66800; font-size:13px; padding-top:13px; height:18px; width:60px"><span class="ambient">NA</span> &#8451;</div>
+    </div>
+
+    <div style="width:110px;display:flex">
+    <div style="color:#d9d9d9; font-size:11px; padding-top:5px; padding-right:5px; height:18px; width:55px; text-align:right">HUMIDITY:</div>
+    <div style="color:#d9d9d9; font-size:11px; padding-top:5px; height:18px; width:53px"><span class="humidity">NA</span> %</div>
+    </div>
+    </div>
+
+<div style="width:300px; height:170px; margin-left:10px; display:inline-block">
+    <div style="width:300px;height:20px;font-size:20px;color:#2c2c2c;margin-bottom:10px;">Distractability</div>
+    <div style="width:300px; height:140px;display:inline-flex">
+    <div id="div_ledpast"  style="width:200px; height:80px;"></div>
+
+    <div style="width:170px; margin-left:125px; margin-top:55px;height:60px;background-color:white;border-style:solid;border-radius:5px; border-width:1px; padding:2px" class="inner">
+        <div id="led-caption" style="font-size:12px; justify-content:center; align-items:center; text-align:center; width:170px;height:14px;padding-bottom:5px;font-style:italic">waiting to begin...</div>
+        <div id="led-title" style="font-size:18px; font-weight:bold; display:flex; width:170px; justify-content:center; align-items:center">LED:
+            <div id="led-color" style="background-color:green; width:20px;height:20px; margin-left:15px; border-style:solid; border-width:1px; border-radius:16px"></div>
+        </div>
+        <div id="led-last" style="font-size:10px; justify-content:center; align-items:center; text-align:center;width:170px;height:14px;padding-top:5px">LAST TIME: <span id="led-lasttime" style="font-weight:bold">NA</span> seconds unnoticed.</div>
+    </div>
+
+    <div class="inner" style="margin-left:110px; margin-top:32px; width:90px; height:20px">
+    <div id="noticed" style="visibility:hidden;width:90px;text-align:center;padding:5px;font-weight:bold;color:white;background-color:#ec3932;border-style:solid;border-color:grey; border-width:1px;border-radius:10px;">NOTICED!</div>
+    </div>
 </div>
 
-<!-- TEMPS: nose, temple, ambient, wrist.  LED. Written updates: (Battery E4,
-    Watch interaction, notice events, phone) ignore IMU-->
+    <div id="labels_temp" class="inner" style="padding-top:15px;width:190px;text-align:right"></div>
+    <div id="labels_led" class="inner" style="padding-top:15px;width:600px;text-align:right"></div>
+</div>
+    <div id="led-desc" class="inner" style="font-size:10px; justify-content:center; align-items:center; text-align:right;width:250px;height:14px;margin-top:155px;padding-left:350px;font-style:italic;color:#d9d9d9">A test of attention based on how long it takes the user to notice the LED has turned BLUE from a usual GREEN.</div>
+</div>
+
+<div style="width:600px; height:200px; display:inline-flex">
+<div style="margin-top:25px;width:370px; height:140px; display:inline-block">
+    <div style="width:370px;height:20px;font-size:20px;color:#2c2c2c;margin-bottom:15px;">Time Perception</div>
+    <div id="time-last" style="font-size:14px; justify-content:center; align-items:center; text-align:center;width:370px;height:18px;">LAST GUESS AT <span id="guess-time">NA</span>:  <span id="guess" style="font-size:16px;font-weight:bold;">NA</span></div>
+    <div id="time-error" style="font-size:12px; font-weight:bold; margin-top:5px; margin-bottom:15px;display:flex; width:370px; justify-content:center; align-items:center">(off by NA min.)</div>
+
+    <div style="width:380px; height:100px;display:inline-flex">
+    <div id="div_timeguess"  style="width:215px; height:120px;margin-right:10px;"></div>
+    <div id="div_timeguessinterval"  style="width:155px; height:120px;"></div>
+
+
+    <div class="inner" style="margin-left:110px; margin-top:32px; width:90px; height:20px">
+        <div id="guessed" style="visibility:hidden;width:130px;text-align:center;padding:5px;font-weight:bold;color:white;background-color:#2c2c2c;border-style:solid;border-color:grey; border-width:1px;border-radius:10px;">NEW GUESS!</div>
+    </div>
+
+    <div id="labels_time" class="inner" style="padding-top:15px;width:215px;text-align:right"></div>
+    <div id="labels_timeinterval" class="inner" style="padding-top:15px;width:300px;text-align:right"></div>
+    </div>
+
+</div>
+<div style="margin-top:70px;margin-left:80px;width:230px;">
+    <div id="extra_vals" style="width:230px;">
+
+    <div style="width:130px;display:flex">
+    <div style="color:#c2c3c5; font-size:11px; padding-top:15px; padding-right:5px; height:18px; width:120px; text-align:right">LUX:</div>
+    <div style="color:#c2c3c5; font-size:13px; padding-top:13px; height:18px; width:60px"><span class="lux">NA</span></div>
+    </div>
+
+    <div style="width:130px;display:flex">
+    <div style="color:#c2c3c5; font-size:11px; padding-top:15px; padding-right:5px; height:18px; width:120px; text-align:right">WHITE LUX:</div>
+    <div style="color:#c2c3c5; font-size:13px; padding-top:13px; height:18px; width:60px"><span class="wlux">NA</span></div>
+    </div>
+
+    <div style="width:130px;display:flex">
+    <div style="color:#c2c3c5; font-size:11px; padding-top:15px; padding-right:5px; height:18px; width:120px; text-align:right">E4 BATTERY:</div>
+    <div style="color:#c2c3c5; font-size:13px; padding-top:13px; height:18px; width:60px"><span class="battery">NA</span> %</div>
+    </div>
+    </div>
+</div>
+</div>
+
+
+
 
 <div style="width:600px; margin-top:10px; height:10px; display:inline-flex">
-    <div style="width:600px;font-size:10px; text-align:right">
+    <div style="width:600px;font-size:11px; text-align:right">
         @dramsay, mit media lab
     </div>
 </div>
@@ -121,6 +212,9 @@
 
 <script>
 
+function roundToTenth(num){
+    return Math.round(num*100)/100;
+}
 
 $(document).ready(function() {
       var socket = io();
@@ -403,7 +497,8 @@ $(document).ready(function() {
     }
     const average = array => array.reduce((a, b) => a + b) / array.length;
 
-    function processTemps(timestamp){
+    function processTemps(timestamp=null){
+
     //on recieve of temp data, push to temps and call this function
     //this function:
     //    (1) checks if we have critical mass of temp data
@@ -411,28 +506,56 @@ $(document).ready(function() {
     //    (2) if so, average, compute one new value for each temp. then
     //    (3) updates values for dygraph, update display values in text
     //    (4) resets itself.
-        if (temps.nose_tp.length > 100 && temps.skin.length > 1 && temps.ambient.length > 1){
-            var humidity = (average(temps.humd));
 
+        if (temps.nose_tp.length > 200 || temps.skin.length > 200 || temps.ambient.length > 2){
+
+            if (timestamp==null){ timestamp = new Date();}
             var to_push = [timestamp];
-            to_push.push(average(temps.skin));
-            to_push.push(average(temps.ambient));
-            to_push.push(processTemp.noseTemp(
-                            average(temps.nose_tp),
-                            average(temps.nose_therm)
-            ));
-            to_push.push(processTemp.templeTemp(
-                            average(temps.temple_tp),
-                            average(temps.temple_therm)
-            ));
+
+            try{
+                to_push.push(average(temps.skin));
+                $('.wrist').text(roundToTenth(to_push[1]));
+            } catch(e){
+                to_push.push(null);
+            }
+
+            try{
+                var corrected_ambient = 21.2 + (6.7/5.4)*(average(temps.ambient)-24);
+                to_push.push(corrected_ambient);
+                $('.ambient').text(roundToTenth(corrected_ambient));
+            } catch(e){
+                to_push.push(null);
+            }
+
+            try{
+                to_push.push(processTemp.noseTemp(
+                                average(temps.nose_tp),
+                                average(temps.nose_therm)
+                ));
+                to_push.push(processTemp.templeTemp(
+                                average(temps.temple_tp),
+                                average(temps.temple_therm)
+                ));
+                $('.nose').text(roundToTenth(to_push[3]));
+                $('.temple').text(roundToTenth(to_push[4]));
+            } catch(e){
+                to_push.push(null, null);
+            }
 
             data_temp.push(to_push);
 
             if (data_temp.length>=500){
                 data_temp.shift();
             }
+
             div_temp.updateOptions( { 'file': data_temp } );
 
+            try{
+            var humidity = (average(temps.humd));
+            $('.humidity').text(roundToTenth(humidity));
+            } catch(e) {}
+
+            //update div with humidiy, to_push vals (time, skin, ambient, nose, temple)
 
             temps = {
                 'skin':[],
@@ -469,7 +592,7 @@ $(document).ready(function() {
         var timestamp = new Date(args[0]*1000);
         var temp = Number(args[1][0]);
         temps.skin.push(temp);
-        processTemps(timestamp);
+        processTemps();
       });
 
 
@@ -490,7 +613,57 @@ $(document).ready(function() {
             vals = [16,19,22,25,28].map(i => thispacket[i])
             temps.nose_therm.push(...vals);
         }
+        processTemps();
       });
+
+      var data_times = [];
+      var prev_time = null;
+      var div_timeguess = new Dygraph(document.getElementById("div_timeguess"), data_times,
+                          {
+                            title: 'Previous Time Guess Errors',
+                            titleHeight: 20,
+                            labels: ['Time', 'Error'],
+                            ylabel:'sec',
+                            labelsDiv: document.getElementById("labels_time"),
+                            axes: {
+                                y: {
+                                    axisLabelWidth: 30
+                                    }
+                            },
+                            drawPoints: true,
+                            pointSize:3,
+                            drawGrid: false,
+                            strokeWidth:0.5
+                          });
+      var data_timesinterval = [];
+      var div_timeguessinterval = new Dygraph(document.getElementById("div_timeguessinterval"), data_timesinterval,
+                          {
+                            title: 'Error % vs Interval Duration',
+                            titleHeight: 20,
+                            labels: ['Interval Length', 'Error'],
+                            ylabel:'percent',
+                            labelsDiv: document.getElementById("labels_timeinterval"),
+                            axes: {
+                                y: {
+                                    axisLabelWidth: 50
+                                    }
+                            },
+                            drawPoints: true,
+                            pointSize:3,
+                            drawGrid: false,
+                            strokeWidth:0
+                          });
+
+      function timeString(t, includeSeconds=true){
+        var hours = t.getHours();
+        var ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        return (hours < 10 ? '0' : '') + hours + ':' +
+               (t.getMinutes() < 10 ? '0' : '') + t.getMinutes() +
+               (includeSeconds ? (':' + (t.getSeconds() < 10 ? '0' : '') + t.getSeconds()) : '') +
+               ' ' + ampm;
+      }
 
       socket.on('w', function(args) {
         switch(args[1]){
@@ -499,35 +672,141 @@ $(document).ready(function() {
             console.log('temp:' + temp);
             temps.ambient.push(temp);
             temps.humd.push(humd);
+            processTemps();
             break;
           case 'TX_LUX_WHITELUX':
             [lux, wlux] = args[2];
+            $('.lux').text(roundToTenth(lux));
+            $('.wlux').text(roundToTenth(wlux));
             break;
           case 'TX_TIME_SEEN':
             var timeSeen = new Date(args[0]);
             console.log('Time Seen: ' + timeSeen);
+            prev_time = timeSeen;
             break;
           case 'TX_TIME_EST':
+            var prev_time_local = prev_time;
             var timeOfEst = new Date(args[0]);
             [hr, min] = args[2].split(':');
             var est = new Date(args[0]);
             est.setHours(Number(hr), Number(min), 0);
+            var err = (est-timeOfEst)/(60*1000);
 
-            console.log('Time Estimate: ' + timeOfEst  + ' ' + args[2]);
-            console.log('ERR ' + (est-timeOfEst)/(60*1000) + ' min.');
+            console.log('Time Estimate at ' + timeString(timeOfEst) + ': ' + timeString(est, false));
+            console.log('ERR ' + err + ' min.');
+
+            $("#guessed").css("visibility","");
+            setTimeout(()=>{
+                    $("#guessed").css("visibility","hidden");
+                    data_times.push([timeOfEst, err]);
+                    div_timeguess.updateOptions( { 'file': data_times } );
+                    $("#guess-time").text(timeString(timeOfEst));
+                    $("#guess").text(timeString(est, false));
+                    $("#time-error").text('(off by ' + roundToTenth(err) + ' min.)' );
+
+                    if (prev_time_local != null){
+                        var interval= (timeOfEst-prev_time_local)/(60*1000);
+                        console.log('interval duration: ' + interval  + ' min');
+                        console.log('error percentage: ' + err/interval*100 + ' %');
+                        data_timesinterval.push([interval, err/interval*100]);
+                        div_timeguessinterval.updateOptions( { 'file': data_timesinterval } );
+
+                    }
+            }, 1500);
             break;
 
         };
       });
+//div_timeguess , time-last time-error guessed labels_time
+
+      // LED Noticed
+      var data_led = [];
+      var div_ledpast = new Dygraph(document.getElementById("div_ledpast"), data_led,
+                          {
+                            title: 'Previous Durations Before Noticing',
+                            titleHeight: 20,
+                            labels: ['Time', 'sec'],
+                            ylabel:'sec',
+                            labelsDiv: document.getElementById("labels_led"),
+                            axes: {
+                                y: {
+                                    axisLabelWidth: 30
+                                    }
+                            },
+                            drawPoints: true,
+                            pointSize:3,
+                            drawGrid: false,
+                            strokeWidth:0.5
+                          });
+
+      var armed_interval = null;
+      var armed_time = 0;
+
+      var delay_interval = null;
+      var delay_time = 0;
 
       socket.on('LED', function(args) {
-        console.log('LED:' + args);
+        switch(args[0]){
+            case 'COLOR':
+                $("#led-color").css("background-color", "rgb(" + args[1] + "," + args[2] + "," + args[3] + ")");
+
+                //when color gets blue enough, go to notice count
+                if (args[3] > 100 && delay_interval==null){
+                    $("#led-caption").css("font-weight", "normal");
+                    $("#led-caption").text(delay_time + " seconds unnoticed...");
+                    delay_interval = setInterval(() => {
+                        $("#led-caption").text(++delay_time + " seconds unnoticed...");
+                    }, 1000);
+                }
+
+                break;
+            case 'ARMED':
+
+                armed_time = Math.floor(args[1]/1000);
+                $("#led-caption").css("font-weight", "normal");
+                $("#led-caption").text(armed_time + " sec until next transition...");
+
+                if (armed_interval == null){
+                    armed_interval = setInterval(() => {
+                        $("#led-caption").text(--armed_time + " sec until next transition...");
+                    }, 1000);
+                }
+
+                break;
+            case 'NOTICED':
+                console.log('LED:' + args);
+                if (delay_interval != null) {
+                    $("#noticed").css("visibility","");
+                    clearInterval(armed_interval);
+                    armed_interval=null;
+                    clearInterval(delay_interval);
+                    delay_interval = null;
+                    $("#led-caption").css("font-weight", "normal");
+                    var timenow = new Date();
+                    setTimeout(()=>{
+                            $("#noticed").css("visibility","hidden");
+                            data_led.push([timenow, delay_time]);
+                            div_ledpast.updateOptions( { 'file': data_led } );
+                            $("#led-lasttime").text(delay_time);
+                            delay_time=0;
+                    }, 1500);
+                }
+                break;
+            case 'START_TRANSITION':
+                clearInterval(armed_interval);
+                armed_interval=null;
+                $("#led-caption").text("TRANSITIONING...");
+                $("#led-caption").css("font-weight", "bold");
+
+                break;
+        }
       });
+
 
       socket.on('E4_Battery', function(args) {
         var t = new Date(args[0]*1000);
         var x = Number(args[1][0]);
-        console.log(t + ': BAT PERCENTAGE = ' + x);
+        $('.battery').text(roundToTenth(x));
       });
 
 

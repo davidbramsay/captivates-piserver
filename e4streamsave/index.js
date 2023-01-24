@@ -22,7 +22,7 @@ var gLEDMIN = 2; //min to wait before LED transition after last time check or la
 var gLEDMINVARIANCE = 2; //uniform distribution of width LEDMINVARIANCE minutes around LEDMIN to make transitions not perfectly predictable.
 
 //E4 Streaming Server
-const E4_HOST = '192.168.2.29';
+const E4_HOST = '192.168.3.207';
 const E4_PORT = 28000;
 
 var SAVE_DATA = false;
@@ -118,6 +118,7 @@ function changeColor(){
           if (!transitioning && 70 == lightState[4]){
           dataLog('u', ['VIDGAME', 'START_TRANSITION']);
           transitioning = true;
+          io.emit('LED', ['START_TRANSITION']);
           }
           if (transitioning){
             moveToBlue();
@@ -301,7 +302,7 @@ function sendLEDUpdate(ledArray){
 
       console.log('[GLASSES] Writing glasses LED: ' + ledArray);
       BLESTATE['gWrite'].writeWithoutResponse(Buffer.from(ledArray.slice(0)));
-      io.emit('LED', [0, ledArray[5], ledArray[4]]);
+      io.emit('LED', ['COLOR', 0, ledArray[5], ledArray[4]]);
     }else{
         console.error('[GLASSES] glasses write not connected');
     }
@@ -336,6 +337,7 @@ function updateWatchData(value){
     if (gLEDTRANSITION && dataArray[1] == 'TX_TIME_SEEN' && BLESTATE['gConn'] != null){
         clearTimeout(lightTimer);
 
+        io.emit('LED', ['NOTICED']);
         if (transitioning){
             transitioning = false;
         }
@@ -345,6 +347,7 @@ function updateWatchData(value){
         let mins =  gLEDMIN + (Math.random()*gLEDMINVARIANCE) - (gLEDMINVARIANCE/2);
         console.log('[TIMER] transition armed for ' + mins + ' mins.');
         lightTimer = setTimeout(changeColor, Math.round(mins*60*1000));
+        io.emit('LED', ['ARMED', mins*60*1000]);
     }
 }
 
