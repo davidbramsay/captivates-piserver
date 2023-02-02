@@ -17,7 +17,7 @@ var LEDINDICATEWATCH = true; //if true, pi LED on either watch/glasses disconnec
 
 //Control behavior for LED on glasses
 var gLEDTRANSITION = true; //if true, do a glasses LED Transtion LEDMINTILTRANSITION min after checking the time. otherwise no LED interaction.
-var gLEDMIN = 2; //min to wait before LED transition after last time check or last noticed transition.
+var gLEDMIN = 25; //min to wait before LED transition after last time check or last noticed transition.
 var gLEDMINVARIANCE = 2; //uniform distribution of width LEDMINVARIANCE minutes around LEDMIN to make transitions not perfectly predictable.
 
 var BLESTATE = {
@@ -245,6 +245,7 @@ function updateWatchData(value){
     let dataArray = processWatchPacket(value);
 	dataLog('w', dataArray);
 
+    console.log('watch data: ' + dataArray);
     if (gLEDTRANSITION && dataArray[1] == 'TX_TIME_SEEN' && BLESTATE['gConn'] != null){
         clearTimeout(lightTimer);
 
