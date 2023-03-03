@@ -126,6 +126,7 @@ function moveToBlue(){
         console.log('ALREADY BLUE');
         dataLog('u', ['VIDGAME', 'FINISHED_TRANSITION']);
         transitioning = false;
+        lightTimer = null;
     }
   }
 
@@ -152,6 +153,8 @@ var fileStreaming = false;
 var writeStream = null;
 var numRecords = 0;
 var fileCloseTimer = null;
+var lastPacketGlasses = true;
+var armed = false;
 
 function closeOpenFile(){
     if (fileStreaming){
@@ -240,29 +243,66 @@ function watchSendPause(pause=true){
     }
 }
 
+function disconnectGlasses(reason=null){
+    if (reason != null){
+    console.log('GLASSES: Disconnected from glasses ' + BLESTATE['gConn'].peerAddress + ' due to ' + HciErrors.toString(reason));
+    }else{
+    console.log('GLASSES: Disconnected from glasses ' + BLESTATE['gConn'].peerAddress + ' due to WATCH TIMEOUT!!!!');
+    }
+    LED.writeSync(1); //set pin state to 1 (turn LED on)
+    BLESTATE['gConn'] = null;
+    BLESTATE['gWrite'] = null;
+    console.log('Closing File due to Glasses Disconnect.');
+    closeOpenFile();
+    clearTimeout(fileCloseTimer);
+    startScan();
+}
+
+function armTransition(){
+    clearTimeout(lightTimer);
+
+    if (transitioning){
+        transitioning = false;
+    }
+
+    resetLight();
+
+    let mins =  gLEDMIN + (Math.random()*gLEDMINVARIANCE) - (gLEDMINVARIANCE/2);
+    console.log('transition armed for ' + mins + ' mins.');
+    armed = true;
+    lightTimer = setTimeout(changeColor, Math.round(mins*60*1000));
+}
 
 function updateWatchData(value){
     let dataArray = processWatchPacket(value);
 	dataLog('w', dataArray);
 
     console.log('watch data: ' + dataArray);
-    if (gLEDTRANSITION && dataArray[1] == 'TX_TIME_SEEN' && BLESTATE['gConn'] != null){
-        clearTimeout(lightTimer);
 
-        if (transitioning){
-            transitioning = false;
+   	if (!lastPacketGlasses && dataArray[1] == 'TX_TEMP_HUMD'){
+		console.log('previous packet not watch.');
+		if (BLESTATE['gConn'] != null){
+			console.log('DISCONNECT DUE TO STALL OF GLASSES');
+            BLESTATE['gConn'].disconnect();
+		}
+	}
+	lastPacketGlasses=false;
+
+
+    if (gLEDTRANSITION && dataArray[1] == 'TX_TIME_SEEN'){
+        if (BLESTATE['gConn'] != null) {
+            armTransition();
+        } else{
+            console.log('transition not armed; gConn == null.');
         }
-
-        resetLight();
-
-        let mins =  gLEDMIN + (Math.random()*gLEDMINVARIANCE) - (gLEDMINVARIANCE/2);
-        console.log('transition armed for ' + mins + ' mins.');
-        lightTimer = setTimeout(changeColor, Math.round(mins*60*1000));
     }
 }
 
 
 function updateGlassesData(value) {
+
+    lastPacketGlasses = true;
+
 	try{
 
   	var parsedPayload = struct.unpack(
@@ -370,6 +410,16 @@ function handleScanReport(eventData){
                                     console.log('GLASSES: GOT GLASSES WRITE CHARACTERISTIC');
                                     //console.log(c);
                                     BLESTATE['gWrite'] = c;
+
+                                    if (armed){
+                                        console.log('GLASSES: PREVIOUSLY ARMED, SENDING LED VALS');
+                                        setTimeout(()=> {
+                                            sendLEDUpdate(lightState);
+                                            if (lightTimer == null){
+                                                armTransition();
+                                            }
+                                        }, 300);
+                                    }
                                 }
                                 if ( c.uuid.toLowerCase() == CAPTIVATES_RX_UUID) {
                                     console.log('GLASSES: GOT GLASSES NOTIFY CHARACTERISTIC');
@@ -384,16 +434,7 @@ function handleScanReport(eventData){
                     checkConnections();
                 });
 
-                BLESTATE['gConn'].on('disconnect', function(reason) {
-                    console.log('GLASSES: Disconnected from glasses ' + conn.peerAddress + ' due to ' + HciErrors.toString(reason));
-                    LED.writeSync(1); //set pin state to 1 (turn LED on)
-                    BLESTATE['gConn'] = null;
-                    BLESTATE['gWrite'] = null;
-                    console.log('Closing File due to Glasses Disconnect.');
-                    closeOpenFile();
-                    clearTimeout(fileCloseTimer);
-                    startScan();
-                });
+                BLESTATE['gConn'].on('disconnect', disconnectGlasses);
             });
     } else if (eventData.connectable && eventData.parsedDataItems['localName'] == 'WATCH01' && BLESTATE['wConn'] == null) {
 
