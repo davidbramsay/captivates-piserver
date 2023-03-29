@@ -18,14 +18,14 @@ var FILETIMEOUT = 240; //open file for writing timeout in mins
 
 //Control behavior for LED on glasses
 var gLEDTRANSITION = true; //if true, do a glasses LED Transtion LEDMINTILTRANSITION min after checking the time. otherwise no LED interaction.
-var gLEDMIN = 2; //min to wait before LED transition after last time check or last noticed transition.
-var gLEDMINVARIANCE = 2; //uniform distribution of width LEDMINVARIANCE minutes around LEDMIN to make transitions not perfectly predictable.
+var gLEDMIN = 60; //min to wait before LED transition after last time check or last noticed transition.
+var gLEDMINVARIANCE = 80; //uniform distribution of width LEDMINVARIANCE minutes around LEDMIN to make transitions not perfectly predictable.
 
 //E4 Streaming Server
 const E4_HOST = '192.168.3.207';
 const E4_PORT = 28000;
 
-var SAVE_DATA = false;
+var SAVE_DATA = true;
 
 //Device
 const E4_ID = 'F035CD';
@@ -329,19 +329,37 @@ function watchSendPause(pause=true){
 
 function updateWatchData(value){
     let dataArray = processWatchPacket(value);
+    console.log(dataArray);
     if (SAVE_DATA){
         dataLog('w', dataArray);
     }
     io.emit('w', dataArray);
 
-    if (gLEDTRANSITION && dataArray[1] == 'TX_TIME_SEEN' && BLESTATE['gConn'] != null){
-        clearTimeout(lightTimer);
-
+    if (gLEDTRANSITION && dataArray[1] == 'TX_NOTICED_LED' && BLESTATE['gConn'] != null){
+        console.log(dataArray[1]=='TX_NOTICED_LED');
         io.emit('LED', ['NOTICED']);
+
         if (transitioning){
-            transitioning = false;
+            transitioning=false;
         }
 
+        clearTimeout(lightTimer);
+        resetLight();
+
+
+        let mins =  gLEDMIN + (Math.random()*gLEDMINVARIANCE) - (gLEDMINVARIANCE/2);
+        console.log('[TIMER] transition armed for ' + mins + ' mins.');
+        lightTimer = setTimeout(changeColor, Math.round(mins*60*1000));
+        io.emit('LED', ['ARMED', mins*60*1000]);
+    }
+
+    if (gLEDTRANSITION && dataArray[1] == 'TX_TIME_SEEN' && BLESTATE['gConn'] != null){
+
+        if (transitioning){
+            transitioning=false;
+        }
+
+        clearTimeout(lightTimer);
         resetLight();
 
         let mins =  gLEDMIN + (Math.random()*gLEDMINVARIANCE) - (gLEDMINVARIANCE/2);

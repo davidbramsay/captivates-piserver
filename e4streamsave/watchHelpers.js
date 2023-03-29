@@ -1,31 +1,25 @@
 const watchUpdateTypes = [
-    'TX_LUX_WHITELUX',          //0
-    'TX_TEMP_HUMD',             //1
-    'TX_SURVEY_INITIALIZED',    //2
-    'TX_TIME_EST',              //3
-    'TX_TIME_SEEN',             //4
-    'TX_SURVEY_RESULT',         //5
-    'TX_PREVIOUS_INVALID',      //6
-    'TX_TIMESTAMP_UPDATE',      //7
-    'TX_BEGIN_PAUSE'];          //8
+    'TX_LUX_WHITELUX',        //0
+	'TX_TEMP_HUMD',           //1
+	'TX_NOTICED_LED',  		  //2
+	'TX_TIME_EST',            //3
+	'TX_TIME_SEEN',           //4
+	'TX_SURVEY_RESULT',       //5
+	'TX_PREVIOUS_INVALID',    //6
+	'TX_TIMESTAMP_UPDATE',    //7
+	'TX_DURATION_EST'];	   	  //8
 
 const watchSurveyTypes = [
-    'SURVEY_NONE',
-    'SURVEY_FOCUS',
-    'SURVEY_AROUSAL',
-    'SURVEY_VALENCE',
-    'SURVEY_COGLOAD',
-    'SURVEY_TIMECUE',
-    'SURVEY_CAFFEINE',
-    'SURVEY_EXERCISE',
+    'SURVEY_CONFTIME',
     'SURVEY_STRESS',
-    'SURVEY_LOCATE',
-    'SURVEY_TSENSE',
-    'SURVEY_TCOMFORT'
-
-
+    'SURVEY_ALERTNESS',
+    'SURVEY_FOCUS',
+    'SURVEY_TIMEFLOW',
+    'SURVEY_CONFDUR',
+    'SURVEY_COGLOAD',
+    'SURVEY_EMOTION',
+    'SURVEY_NEWACT'
 ];
-
 
 Date.prototype.stdTimezoneOffset = function () {
 var jan = new Date(this.getFullYear(), 0, 1);
@@ -80,12 +74,13 @@ module.exports.processWatchPacket = function(value) {
             case 'TX_TEMP_HUMD':
                 data = [hexToFloat(hexval.slice(20,28)), hexToFloat(hexval.slice(28))];
                 break;
-            case 'TX_SURVEY_INITIALIZED':
+            case 'TX_TIME_SEEN':
+            case 'TX_NOTICED_LED':
             case 'TX_PREVIOUS_INVALID':
-            case 'TX_BEGIN_PAUSE':
                 data = '';
                 break;
             case 'TX_TIME_EST':
+            case 'TX_DURATION_EST':
                 data = parseInt(hexval.slice(20,22), 16) + ':' + parseInt(hexval.slice(22), 16);
                 break;
             case 'TX_SURVEY_RESULT':

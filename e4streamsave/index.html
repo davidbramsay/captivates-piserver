@@ -12,7 +12,8 @@
 <script src="processTemp.js" type="text/javascript"></script>
 </head>
 
-<body style="background-color:lime;">
+<body style="">
+    <button type="button" id="toggleE4" style="width:600px;height:50px;margin-right:30px; margin-bottom:100px;">Toggle E4 Display.</button>
 
 <!--<div style="font-size:30px; margin:20px 10px 20px 10px;">E4 Streaming
     Dashboard</div>-->
@@ -20,7 +21,7 @@
 <div style="border-style: solid;
             background-color:white;
             border-radius: 15px;
-            border: solid 3px #6e7491;
+            border: solid 3px white;
             padding:10px;
             width: 600px;
             ">
@@ -45,7 +46,7 @@
     <div id="labels_hr" class="inner" style="width:600px;text-align:right"></div>
 </div>-->
 
-<div style="width:600px; height:100px; display:inline-flex">
+<div class="e4" style="width:600px; height:100px; display:inline-flex">
 
 <div style="width:375px; height:140px; display:inline-flex">
     <div id="div_bvp" style="width:350px; height:140px;"></div>
@@ -68,29 +69,29 @@
 </div>
 
 
-<div class="separator">
+<div class="e4 separator">
     <div class="separator__content"></div>
 </div>
 
-<div style="width:600px; height:140px; display:inline-flex">
+<div class="e4" style="width:600px; height:140px; display:inline-flex">
     <div id="div_gsr" style="width:600px; height:140px;"></div>
     <div id="labels_gsr" class="inner" style="padding-top:15px;width:600px;text-align:right"></div>
 </div>
 
 
 <div style="margin-top:20px; width:600px; height:140px; display:inline-flex">
-<div style="width:300px; height:140px; display:inline-flex">
+<div class="e4" style="width:300px; height:140px; display:inline-flex">
     <div id="div_acc" style="width:300px; height:140px;"></div>
     <div id="labels_acc" class="inner" style="padding-top:15px;width:300px;text-align:right"></div>
 </div>
 
-<div style="width:300px; height:140px; display:inline-flex">
-    <div id="div_ga" style="width:300px; height:140px;"></div>
-    <div id="labels_ga" class="inner" style="padding-top:15px;width:300px;text-align:right"></div>
+<div class="ga" style="width:300px; height:140px; display:inline-flex">
+    <div class="ga" id="div_ga" style="width:300px; height:140px;"></div>
+    <div class="ga" id="labels_ga" class="inner" style="padding-top:15px;width:300px;text-align:right"></div>
 </div>
 </div>
 
-<div class="separator">
+<div class="e4 separator">
     <div class="separator__content"></div>
 </div>
 
@@ -186,7 +187,7 @@
     <div style="color:#c2c3c5; font-size:13px; padding-top:13px; height:18px; width:60px"><span class="wlux">NA</span></div>
     </div>
 
-    <div style="width:130px;display:flex">
+    <div class="e4" style="width:130px;display:flex">
     <div style="color:#c2c3c5; font-size:11px; padding-top:15px; padding-right:5px; height:18px; width:120px; text-align:right">E4 BATTERY:</div>
     <div style="color:#c2c3c5; font-size:13px; padding-top:13px; height:18px; width:60px"><span class="battery">NA</span> %</div>
     </div>
@@ -208,9 +209,34 @@
 <!--<div id="div_ibi" style="width:500px; height:100px;"></div>-->
 
 
+
+
 </body>
 
 <script>
+
+function showE4(){
+    $(".e4").show();
+    $(".ga").width(300);
+}
+
+function hideE4(){
+    $(".e4").hide();
+    $(".ga").width(600);
+}
+var E4_VISIBLE = true;
+
+$('#toggleE4').bind('click', function(evt) {
+        if (E4_VISIBLE){
+            hideE4();
+            window.dispatchEvent(new Event('resize'));
+            E4_VISIBLE = false;
+        } else{
+            showE4();
+            window.dispatchEvent(new Event('resize'));
+            E4_VISIBLE = true;
+        }
+});
 
 function roundToTenth(num){
     return Math.round(num*100)/100;
@@ -752,6 +778,8 @@ $(document).ready(function() {
 
                 //when color gets blue enough, go to notice count
                 if (args[3] > 100 && delay_interval==null){
+                    clearInterval(armed_interval);
+                    armed_interval=null;
                     $("#led-caption").css("font-weight", "normal");
                     $("#led-caption").text(delay_time + " seconds unnoticed...");
                     delay_interval = setInterval(() => {
