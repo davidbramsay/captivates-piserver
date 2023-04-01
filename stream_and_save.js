@@ -123,10 +123,10 @@ function moveToBlue(){
         sendLEDUpdate(lightState);
 
     } else {
+        lightTimer = null;
         console.log('ALREADY BLUE');
         dataLog('u', ['VIDGAME', 'FINISHED_TRANSITION']);
         transitioning = false;
-        lightTimer = null;
     }
   }
 
@@ -280,9 +280,10 @@ function updateWatchData(value){
     console.log('watch data: ' + dataArray);
 
    	if (!lastPacketGlasses && dataArray[1] == 'TX_TEMP_HUMD'){
-		console.log('previous packet not watch.');
+		console.log('no glasses packets detected between watch packets...');
 		if (BLESTATE['gConn'] != null){
-			console.log('DISCONNECT DUE TO STALL OF GLASSES');
+            console.log('glasses appear to be connected.');
+			console.log('!! FORCE DISCONNECT ATTEMPT DUE TO SILENT STALL OF GLASSES !!');
             BLESTATE['gConn'].disconnect();
 		}
 	}
@@ -415,9 +416,9 @@ function handleScanReport(eventData){
                                         console.log('GLASSES: PREVIOUSLY ARMED, SENDING LED VALS');
                                         setTimeout(()=> {
                                             sendLEDUpdate(lightState);
-                                            if (lightTimer == null){
-                                                armTransition();
-                                            }
+                                            //if (lightTimer == null){
+                                            //    armTransition();
+                                            //}
                                         }, 300);
                                     }
                                 }
