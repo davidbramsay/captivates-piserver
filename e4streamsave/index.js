@@ -12,6 +12,20 @@ const HciSocket = require('hci-socket');
 const struct = require('python-struct');
 const fs = require('fs');
 
+const ACTIVITIES = [
+    'Reading',
+    'Writing',
+    'Viewing Media',
+    'Browsing the Web',
+    'Playing Games',
+    'Playing Music',
+    'Recording Music',
+    'Socializing',
+    'Coding',
+    'Building',
+    'Misc. Work'
+];
+
 //Open File for writing will close either when we hit:
 var MAXRECORDS = 12500;  //max records before closing a file
 var FILETIMEOUT = 240; //open file for writing timeout in mins
@@ -31,7 +45,7 @@ var SAVE_DATA = true;
 const E4_ID = 'F035CD';
 
 //Front-end
-const WEB_PORT = 8000;
+const WEB_PORT = 5000;
 
 
 // Webserver Start
@@ -367,6 +381,21 @@ function updateWatchData(value){
         lightTimer = setTimeout(changeColor, Math.round(mins*60*1000));
         io.emit('LED', ['ARMED', mins*60*1000]);
     }
+
+    try{
+        if(dataArray[1] == 'TX_SURVEY_RESULT'){
+            if(dataArray[2][0] == 'SURVEY_NEWACT'){
+               let stringToWrite = ACTIVITIES[dataArray[2][1]];
+               fs.writeFile("public/currentActivity.txt", stringToWrite, (err) =>{
+                    if (err) {
+                        console.log(err);
+                    }
+               });
+            }
+        }
+	}catch(e){
+        console.error(e);
+	}
 }
 
 
